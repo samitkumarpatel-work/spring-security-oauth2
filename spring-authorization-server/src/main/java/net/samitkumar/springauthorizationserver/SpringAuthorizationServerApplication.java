@@ -8,14 +8,28 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Collection;
+import java.util.List;
 
 @SpringBootApplication
 @EnableWebSecurity
@@ -53,8 +67,10 @@ public class SpringAuthorizationServerApplication {
 			throws Exception {
 		http
 				.authorizeHttpRequests((authorize) -> authorize
+						.requestMatchers("/register").permitAll()
 						.anyRequest().authenticated()
 				)
+				.csrf(csrf -> csrf.ignoringRequestMatchers("/register"))
 				// Form login handles the redirect to the login page from the
 				// authorization server filter chain
 				.formLogin(Customizer.withDefaults())
@@ -76,4 +92,64 @@ public class SpringAuthorizationServerApplication {
 		return source;
 	}
 
+	@Bean
+	PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+	@Bean
+	public UserDetailsService users(PasswordEncoder passwordEncoder) {
+		UserDetails user = new User(1, "user", passwordEncoder.encode("password"));
+		return new InMemoryUserDetailsManager(user);
+	}
+
+}
+
+@RestController
+class AppRouter {
+	@GetMapping("/register")
+	public String register() {
+		return "register";
+	}
+	@PostMapping("/register")
+	public String registerPost(@RequestBody String body) {
+		return "register"+body;
+	}
+
+}
+
+record User(Integer id, String username, String password) implements UserDetails {
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+		return List.of(new SimpleGrantedAuthority("ADMIN"));
+	}
+
+	@Override
+	public String getPassword() {
+		return password;
+	}
+
+	@Override
+	public String getUsername() {
+		return username;
+	}
+
+	@Override
+	public boolean isAccountNonExpired() {
+		return true;
+	}
+
+	@Override
+	public boolean isAccountNonLocked() {
+		return true;
+	}
+
+	@Override
+	public boolean isCredentialsNonExpired() {
+		return true;
+	}
+
+	@Override
+	public boolean isEnabled() {
+		return true;
+	}
 }
