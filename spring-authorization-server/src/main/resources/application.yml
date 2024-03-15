@@ -1,0 +1,28 @@
+logging:
+  level:
+    org.springframework.security: trace
+
+spring:
+  application:
+    name: spring-authorization-server
+  security:
+    user:
+      name: admin
+      password: secret
+    oauth2:
+      authorizationserver:
+        client:
+          public-client:
+            registration:
+              client-id: "public-client"
+              client-authentication-methods:
+                - "none"
+              authorization-grant-types:
+                - "authorization_code"
+              redirect-uris:
+                - "http://localhost:3000"
+              scopes:
+                - "openid"
+                - "profile"
+            require-authorization-consent: true
+            require-proof-key: true
